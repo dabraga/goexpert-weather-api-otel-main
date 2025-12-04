@@ -1,0 +1,55 @@
+services:
+  service-a:
+    build:
+      context: .
+      dockerfile: ./service-a/Dockerfile
+    container_name: service-a
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./service-a/.env
+    depends_on:
+      - service-b
+      - zipkin
+    networks:
+      - weather-network
+
+  service-b:
+    build:
+      context: .
+      dockerfile: ./service-b/Dockerfile
+    container_name: service-b
+    ports:
+      - "8081:8081"
+    env_file:
+      - ./service-b/.env
+    depends_on:
+      - zipkin
+    networks:
+      - weather-network
+
+  zipkin:
+    image: openzipkin/zipkin:latest
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - weather-network
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./.docker/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4318:4318"
+      - "55679:55679"
+    depends_on:
+      - zipkin
+    networks:
+      - weather-network
+
+networks:
+  weather-network:
+    driver: bridge
